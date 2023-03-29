@@ -75,11 +75,14 @@ def main_route():
     min_length = int(min_length) if min_length else 10
     min_length = max(10, min_length)
 
-    dir_path = os.path.dirname(os.path.realpath(__file__)) + '\pg1228.txt'
+    dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'pg1228.txt')
     data = sg.get_sentence(dir_path, max_length, min_length)
 
     bottle.response.content_type = 'application/json'
     return json.dumps({'sentence': data, 'max_length': max_length, 'min_length': min_length, 'host': sg.get_hostname()})
 
 
-app.run(host='localhost', port=8080)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080, debug=True, reloader=True)
+

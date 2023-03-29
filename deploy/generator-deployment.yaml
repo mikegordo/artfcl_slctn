@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generator-deployment
+  labels:
+    type: generator
+    app: as
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: generator-pod
+      app: as
+  template:
+    metadata:
+      name: generator-pod
+      labels:
+        type: generator-pod
+        app: as
+    spec:
+      containers:
+        - name: generator-app
+          image: himor/as-generator
+          ports:
+            - containerPort: 8080

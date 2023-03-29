@@ -2,10 +2,10 @@ FROM python:3.9-slim-buster
 
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
+ADD . /app
 
-RUN pip3 install -r requirements.txt
+RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
 
-COPY . .
+EXPOSE 8080
 
 CMD [ "python3", "main.py" ]
