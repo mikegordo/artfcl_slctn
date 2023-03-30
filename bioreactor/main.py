@@ -20,16 +20,25 @@ logger = logging.getLogger(__name__)
 MIN_LENGTH = os.environ.get('MIN_LENGTH', 10)
 MAX_LENGTH = os.environ.get('MAX_LENGTH', 40)
 NUM_CHILDREN = os.environ.get('NUM_CHILDREN', 3)
+MUTATION_PROBABILITY = os.environ.get('MUTATION_PROBABILITY', 3)
 
 class Bioreactor:
     def __init__(self):
         self.cache = self.create_redis_connection()
         self.host = self.get_hostname()
+        self.job_list = None
         self.job = None
         self.iteration = 0
+        self.discarded = 0
         self.target = None
         self.current = None
         self.ready = False
+        self.status = None
+        self.coef = 0
+        self.min_length = int(MIN_LENGTH)
+        self.max_length = int(MAX_LENGTH)
+        self.num_childred = int(NUM_CHILDREN)
+        self.mutation_probability = int(MUTATION_PROBABILITY)
 
     @staticmethod
     def create_redis_connection():
@@ -51,21 +60,27 @@ class Bioreactor:
             if not self.ready:
                 self.initialize_job()
 
-            coef = 0.0
+            self.coef = 0.0
+            self.status = 'IN_PROGRESS'
+            self.update_status()
             while True:
-                candidates = incubate(self.current, self.target, NUM_CHILDREN)
+                candidates = incubate(self.current, self.target, self.num_childred, self.mutation_probability)
                 logger.info('Incubated: ' + json.dumps(candidates))
                 self.iteration += 1
-                if candidates['best'] < coef:
+                if candidates['best'] < (self.coef * 1.0):
+                    self.discarded += 1
                     logger.info(f'Discarded generation. Iteration: {self.iteration}.')
                     continue
     
-                coef = candidates['best']    
-                self.current = candidates['mapping'][coef]
+                self.coef = candidates['best']    
+                self.current = candidates['mapping'][self.coef]
                 logger.info(f'Current: "{self.current}", iteration: {self.iteration}.')
                 self.save_job()
     
                 if self.current == self.target:
+                    self.status = 'COMPLETE'
+                    self.update_status()
+                    self.save_job()
                     logger.info(f'Completed in {self.iteration} iterations.')
                     self.clean_up()
                     break
@@ -78,7 +93,7 @@ class Bioreactor:
         jobkey = self.host + '-job'
         if not self.cache.exists(jobkey):
             return False
-        job_id = self.cache.get(jobkey)
+        job_id = str(self.cache.get(jobkey))
         logger.info('Loaded current job ' + jobkey + ': ' + job_id)
         
         if not self.cache.exists('JOB:' + job_id):
@@ -98,7 +113,7 @@ class Bioreactor:
         """
         self.job = str(uuid.uuid4())
         self.iteration = 0
-        self.target = self.fetch_target(MIN_LENGTH, MAX_LENGTH)
+        self.target = self.fetch_target(self.min_length, self.max_length)
         self.current = 'a' * len(self.target)
         jobkey = self.host + '-job'
         self.cache.set(jobkey, self.job)
@@ -111,8 +126,13 @@ class Bioreactor:
         job = {
             'id': self.job,
             'iteration': self.iteration,
+            'discarded': self.discarded,
             'target': self.target,
-            'current': self.current
+            'current': self.current,
+            'status': self.status,
+            'coef': self.coef,
+            'num_children': self.num_childred,
+            'mutation_probability': self.mutation_probability
         }
         self.cache.set('JOB:' + self.job, json.dumps(job))
 
@@ -121,25 +141,43 @@ class Bioreactor:
         This function registers the job by adding it to the job list.
         """
         time.sleep(random.randint(1, 1000) / 1000)
-        while self.cache.exists('job-list-lock'):
-            time.sleep(random.randint(1, 1000) / 1000)
-            logger.info(f'[{self.host}] waiting for lock.')
-        self.cache.set('job-list-lock', 'Lock', ex=5)
-        logger.info(f'[{self.host}] acquired lock.')
-        job_list = JobsList()
+        self.job_list_lock()
+        self.job_list = JobsList()
         if self.cache.exists('jobs-list'):
-            job_list = JobsList.create(self.cache.get('jobs-list'))
-        if not job_list.contains(self.job):
-            job_list.add(self.job)
+            self.job_list = JobsList.create(self.cache.get('jobs-list'))
+        if not self.job_list.contains(self.job):
+            self.job_list.add(self)
             logger.info(f'[{self.host}] job {self.job} added to job list.')
-            self.cache.set('jobs-list', job_list.to_json())
+            self.cache.set('jobs-list', self.job_list.to_json())
+        self.job_list_unlock()
 
     def clean_up(self) -> None:
         self.job = None
         self.iteration = 0
+        self.discarded = 0
+        self.coef = 0
         self.target = None
         self.current = None
+        self.status = None
         self.ready = False
+
+    def job_list_lock(self) -> None:
+        while self.cache.exists('job-list-lock'):
+            time.sleep(1)
+            logger.info(f'[{self.host}] waiting for lock.')
+        self.cache.set('job-list-lock', 'Lock', ex=60)
+
+    def job_list_unlock(self) -> None:
+        self.cache.delete('job-list-lock')
+
+    def update_status(self) -> None:
+        self.job_list_lock()
+        self.job_list = JobsList()
+        if self.cache.exists('jobs-list'):
+            self.job_list = JobsList.create(self.cache.get('jobs-list'))
+        self.job_list.update(self)
+        self.cache.set('jobs-list', self.job_list.to_json())
+        self.job_list_unlock()
             
     def fetch_target(self, min_length: int, max_length: int) -> Optional[str]:
         """

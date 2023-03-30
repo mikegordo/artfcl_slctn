@@ -21,3 +21,12 @@ spec:
       containers:
         - name: bioreactor-app
           image: himor/as-bioreactor
+          env:
+            - name: MUTATION_PROBABILITY
+              value: "1"
+            - name: NUM_CHILDREN
+              value: "1"
+            - name: MIN_LENGTH
+              value: "30"
+            - name: MAX_LENGTH
+              value: "240"

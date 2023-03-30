@@ -6,7 +6,7 @@ metadata:
     type: ui-deployment
     app: as
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       type: ui-pod

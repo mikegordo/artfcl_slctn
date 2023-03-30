@@ -45,9 +45,9 @@ build: build_generator build_bioreactor build_ui
 
 kill:
 	kubectl delete deployment generator-deployment
+	kubectl delete deployment ui-deployment
 	kubectl delete deployment redis-deployment
 	kubectl delete deployment bioreactor-deployment
-	kubectl delete deployment ui-deployment
 	kubectl delete service generator
 	kubectl delete service redis
 	kubectl delete service ui-service-exposed
@@ -56,3 +56,10 @@ kill:
 deploy: deploy_generator deploy_redis deploy_bioreactor deploy_ui
 	@echo "\nURL:"
 	@minikube service ui-service-exposed --url
+
+dev_ui: build_ui deploy_ui
+	# done
+
+kill_dev_ui: 
+	kubectl delete deployment ui-deployment
+	kubectl delete service ui-service-exposed

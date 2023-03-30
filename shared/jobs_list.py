@@ -16,10 +16,16 @@ class JobsList:
         return job in self.jobs
     
     def add(self, job):
-        self.jobs[job] = str(datetime.datetime.now())
+        self.jobs[job.job] = {
+            "time": str(datetime.datetime.now()),
+            "status": job.status
+        }
+
+    def update(self, job):
+        self.jobs[job.job]['status'] = job.status
 
     def sorted_jobs(self):
-        return dict(sorted(self.jobs.items(), key=lambda item: item[1]))
+        return self.jobs
 
     def to_json(self):
         return json.dumps(self.jobs)

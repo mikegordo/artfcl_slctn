@@ -1,0 +1,37 @@
+* {
+    font-family: 'Roboto Mono', monospace;
+}
+
+h2,
+h4 {
+    font-weight: 300;
+}
+
+
+#job_info table th {
+    font-weight: 600;
+    min-width: 220px;
+    vertical-align: top;
+}
+
+#job_info table td {
+    font-weight: 400;
+}
+
+span.status-IN_PROGRESS {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-left: 10px;
+    background: rgb(103, 229, 238);
+}
+
+span.status-COMPLETE {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-left: 10px;
+    background: rgb(22, 161, 41);
+}

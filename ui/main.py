@@ -19,10 +19,28 @@ class Ui:
         if self.cache.exists('jobs-list'):
             job_list = JobsList.create(self.cache.get('jobs-list'))
         return job_list.sorted_jobs()
+    
+    def job_info(self, job_id):
+        key_value = 'JOB:' + job_id
+        if not self.cache.exists(key_value):
+            return None
+        
+        job = json.loads(self.cache.get(key_value))
+        job['iterations_per_letter'] = job['iteration'] / len(job['target'])
+        job['discarded_per_letter'] = job['discarded'] / len(job['target'])
+        job['percent_discarded'] = job['discarded'] / job['iteration'] * 100
+
+        return job
 
 
 ui = Ui()
 app = bottle.default_app()
+
+
+# Static Routes
+@app.get("/static/<filename>")
+def css(filename):
+    return bottle.static_file(filename, root="/app/main/static")
 
 
 @app.route(path="/", method="GET")
@@ -37,6 +55,14 @@ def jobs():
     jobs = ui.get_jobs()
     bottle.response.content_type = 'application/json'
     return json.dumps({'jobs': jobs})
+
+
+@app.route(path="/job", method="GET")
+def job_info():
+    job_id = bottle.request.query.job
+    job = ui.job_info(job_id)
+    bottle.response.content_type = 'application/json'
+    return json.dumps({'job': job, 'job_id': job_id})
 
 
 if __name__ == "__main__":

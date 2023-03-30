@@ -22,10 +22,11 @@ def levenshtein_distance(s1, s2):
         current_row = [i + 1]
         for j, c2 in enumerate(s2):
             # Calculate the cost of insertions, deletions, and substitutions
-            insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1
+            # insertions = previous_row[j + 1] + 1
+            # deletions = current_row[j] + 1
             substitutions = previous_row[j] + (c1 != c2)
             # Append the minimum cost to the current row
-            current_row.append(min(insertions, deletions, substitutions))
+            # current_row.append(min(insertions, deletions, substitutions))
+            current_row.append(substitutions)
         previous_row = current_row
     return previous_row[-1]

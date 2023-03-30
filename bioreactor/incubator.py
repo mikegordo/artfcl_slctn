@@ -1,10 +1,7 @@
 import random
-import os
 from comparator import string_similarity
 
-MUTATION_PROBABILITY = os.environ.get('MUTATION_PROBABILITY', 3)
-
-def incubate(current: str, target: str, count: int) -> dict:
+def incubate(current: str, target: str, count: int, mutation_probability: int) -> dict:
     result = {
         "keys": [],
         "mapping": {},
@@ -12,7 +9,7 @@ def incubate(current: str, target: str, count: int) -> dict:
     }
 
     for i in range(count):
-        n = random.randint(1, MUTATION_PROBABILITY)
+        n = random.randint(1, mutation_probability)
         val = current
         for k in range(n):
             val = change_char(val)
