@@ -41,49 +41,35 @@ class Bioreactor:
         return socket.gethostname()
 
     def run(self):
-        self.register()
-        if not self.load_current_job():
-            while not self.ready:
-                self.initialize_job()
-                if not self.ready:
-                    logger.error('Something went wrong. Sleeping 60 seconds.')
-                    time.sleep(60)
+        self.load_current_job()
 
-        coef = 0.0
         while True:
-            candidates = incubate(self.current, self.target, NUM_CHILDREN)
-            logger.info('Incubated: ' + json.dumps(candidates))
-            self.iteration += 1
-            if candidates['best'] < coef:
-                logger.info(f'Discarded generation. Iteration: {self.iteration}.')
-                continue
+            if not self.ready:
+                self.initialize_job()
 
-            coef = candidates['best']    
-            self.current = candidates['mapping'][coef]
-            logger.info(f'Current: "{self.current}", iteration: {self.iteration}.')
-            self.save_job()
-
-            if self.current == self.target:
-                logger.info(f'Completed in {self.iteration} iterations.')
+            coef = 0.0
+            while True:
+                candidates = incubate(self.current, self.target, NUM_CHILDREN)
+                logger.info('Incubated: ' + json.dumps(candidates))
+                self.iteration += 1
+                if candidates['best'] < coef:
+                    logger.info(f'Discarded generation. Iteration: {self.iteration}.')
+                    continue
+    
+                coef = candidates['best']    
+                self.current = candidates['mapping'][coef]
+                logger.info(f'Current: "{self.current}", iteration: {self.iteration}.')
+                self.save_job()
+    
+                if self.current == self.target:
+                    logger.info(f'Completed in {self.iteration} iterations.')
+                    self.clean_up()
+                    break
                 
         
 
             
-    def register(self,) -> None:
-        time.sleep(random.randint(1, 1000) / 1000)
-        while self.cache.exists('workers-list-lock'):
-            time.sleep(random.randint(1, 1000) / 1000)
-            logger.info(f'[{self.host}] waiting for lock.')
-        self.cache.set('workers-list-lock', 'Lock', ex=5)
-        logger.info(f'[{self.host}] acquired lock.')
-        worker_list = []
-        if self.cache.exists('workers-list'):
-            wl = self.cache.get('worker-list')
-            worker_list = json.loads(wl)
-        if not self.host in worker_list:
-            worker_list.append(self.host)
-            logger.info(f'[{self.host}] added to worker list.')
-            self.cache.set('worker-list', json.dumps(worker_list))
+
         
     def load_current_job(self) -> bool:
         """
@@ -102,7 +88,7 @@ class Bioreactor:
         self.target = job['target']
         self.current = job['current']
 
-    def initialize_job(self):
+    def initialize_job(self) -> None:
         """
         This function initializes a new job and sets the job, iteration, target, and current variables.
         """
@@ -113,9 +99,10 @@ class Bioreactor:
         jobkey = self.host + '-job'
         logger.info(f'Generated new job {jobkey}, ID: {self.job}, target: "{self.target}"')
         self.save_job()
+        self.register()
         self.ready = True
 
-    def save_job(self):
+    def save_job(self) -> None:
         job = {
             'id': self.job,
             'iteration': self.iteration,
@@ -125,6 +112,32 @@ class Bioreactor:
         jobkey = self.host + '-job'
         self.cache.set(jobkey, json.dumps(job))
 
+    def register(self) -> None:
+        """
+        This function registers the job by adding it to the job list.
+        """
+        time.sleep(random.randint(1, 1000) / 1000)
+        while self.cache.exists('job-list-lock'):
+            time.sleep(random.randint(1, 1000) / 1000)
+            logger.info(f'[{self.host}] waiting for lock.')
+        self.cache.set('job-list-lock', 'Lock', ex=5)
+        logger.info(f'[{self.host}] acquired lock.')
+        job_list = []
+        if self.cache.exists('jobs-list'):
+            wl = self.cache.get('jobs-list')
+            job_list = json.loads(wl)
+        if not self.job in job_list:
+            job_list.append(self.job)
+            logger.info(f'[{self.host}] job {self.job} added to job list.')
+            self.cache.set('jobs-list', json.dumps(job_list))
+
+    def clean_up(self) -> None:
+        self.job = None
+        self.iteration = 0
+        self.target = None
+        self.current = None
+        self.ready = False
+            
     def fetch_target(self, min_length: int, max_length: int) -> Optional[str]:
         """
         This function fetches a target string from a remote endpoint using GET method and returns it.
