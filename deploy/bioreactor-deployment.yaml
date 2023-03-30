@@ -6,7 +6,7 @@ metadata:
     type: bioreactor-deployment
     app: as
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       type: bioreactor-pod

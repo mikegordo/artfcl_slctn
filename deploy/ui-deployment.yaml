@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui-deployment
+  labels:
+    type: ui-deployment
+    app: as
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: ui-pod
+      app: as
+  template:
+    metadata:
+      name: ui-pod
+      labels:
+        type: ui-pod
+        app: as
+    spec:
+      containers:
+        - name: ui-app
+          image: himor/as-ui
+          ports:
+            - containerPort: 8080

@@ -1,4 +1,4 @@
-.PHONY: build_generator run_generator build_bioreactor deploy_generator deploy_redis kill deploy
+.PHONY: build_generator run_generator build_bioreactor build_ui deploy_generator deploy_redis deploy_bioreactor deploy_ui kill deploy
 
 build_generator:
 	docker build -t himor/as-generator ./generator
@@ -10,6 +10,10 @@ run_generator:
 build_bioreactor:
 	docker build -t himor/as-bioreactor ./bioreactor
 	docker push himor/as-bioreactor
+
+build_ui:
+	docker build -t himor/as-ui ./ui
+	docker push himor/as-ui
 
 deploy_generator:
 	kubectl create -f deploy/generator-deployment.yaml
@@ -26,12 +30,18 @@ deploy_redis:
 deploy_bioreactor:
 	kubectl create -f deploy/bioreactor-deployment.yaml
 
+deploy_ui:
+	kubectl create -f deploy/ui-deployment.yaml
+	kubectl create -f deploy/ui-service-exposed.yaml
+
 kill:
 	kubectl delete deployment generator-deployment
 	kubectl delete deployment redis-deployment
 	kubectl delete deployment bioreactor-deployment
+    kubectl delete deployment ui-deployment
 	kubectl delete service generator
 	kubectl delete service redis
+    kubectl delete service ui-service-exposed
 	# kubectl delete service generator-service-exposed
 
 deploy: deploy_generator deploy_redis deploy_bioreactor

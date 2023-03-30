@@ -1,8 +1,10 @@
 FROM python:3.9-slim-buster
 
-WORKDIR /app
+WORKDIR /app/main
 
-ADD . /app
+ADD . /app/main
+
+ADD ../shared /app/shared
 
 RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
 

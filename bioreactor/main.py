@@ -7,8 +7,12 @@ import logging
 import requests
 import time
 import random
+import sys
 from typing import Optional
 from incubator import incubate
+
+sys.path.append('../shared')
+from shared.jobs_list import JobsList
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -66,11 +70,6 @@ class Bioreactor:
                     self.clean_up()
                     break
                 
-        
-
-            
-
-        
     def load_current_job(self) -> bool:
         """
         This function reads the current job from the cache and sets the job, iteration, target, and current variables.
@@ -79,9 +78,14 @@ class Bioreactor:
         jobkey = self.host + '-job'
         if not self.cache.exists(jobkey):
             return False
-
-        logger.info('Loaded current job ' + jobkey)
-        key_value = self.cache.get(jobkey)
+        job_id = self.cache.get(jobkey)
+        logger.info('Loaded current job ' + jobkey + ': ' + job_id)
+        
+        if not self.cache.exists('JOB:' + job_id):
+            logger.info('Job ID ' + job_id + ' not found')
+            return False
+        
+        key_value = self.cache.get('JOB:' + job_id)
         job = json.loads(key_value)
         self.job = job['id']
         self.iteration = job['iteration']
@@ -97,6 +101,7 @@ class Bioreactor:
         self.target = self.fetch_target(MIN_LENGTH, MAX_LENGTH)
         self.current = 'a' * len(self.target)
         jobkey = self.host + '-job'
+        self.cache.set(jobkey, self.job)
         logger.info(f'Generated new job {jobkey}, ID: {self.job}, target: "{self.target}"')
         self.save_job()
         self.register()
@@ -109,8 +114,7 @@ class Bioreactor:
             'target': self.target,
             'current': self.current
         }
-        jobkey = self.host + '-job'
-        self.cache.set(jobkey, json.dumps(job))
+        self.cache.set('JOB:' + self.job, json.dumps(job))
 
     def register(self) -> None:
         """
@@ -122,14 +126,13 @@ class Bioreactor:
             logger.info(f'[{self.host}] waiting for lock.')
         self.cache.set('job-list-lock', 'Lock', ex=5)
         logger.info(f'[{self.host}] acquired lock.')
-        job_list = []
+        job_list = JobsList()
         if self.cache.exists('jobs-list'):
-            wl = self.cache.get('jobs-list')
-            job_list = json.loads(wl)
-        if not self.job in job_list:
-            job_list.append(self.job)
+            job_list = JobsList.create(self.cache.get('jobs-list'))
+        if not job_list.contains(self.job):
+            job_list.add(self.job)
             logger.info(f'[{self.host}] job {self.job} added to job list.')
-            self.cache.set('jobs-list', json.dumps(job_list))
+            self.cache.set('jobs-list', job_list.to_json())
 
     def clean_up(self) -> None:
         self.job = None
