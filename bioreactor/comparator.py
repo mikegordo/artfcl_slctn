@@ -12,7 +12,6 @@ def string_similarity(s1, s2):
     return (len(s1) - levenshtein_distance(s1, s2)) / len(s1)
 
 # This function calculates the Levenshtein distance between two strings
-@staticmethod
 def levenshtein_distance(s1, s2):
     if len(s1) < len(s2):
         s1, s2 = s2, s1

@@ -49,13 +49,18 @@ class Bioreactor:
                     logger.error('Something went wrong. Sleeping 60 seconds.')
                     time.sleep(60)
 
+        coef = 0.0
         while True:
             candidates = incubate(self.current, self.target, NUM_CHILDREN)
             logger.info('Incubated: ' + json.dumps(candidates))
-            time.sleep(5) # todo remove
-            self.current = candidates['mapping'][candidates['best']]
             self.iteration += 1
-            logger.info(f'Current: "{self.current}", iteration: {self.iteration}')
+            if candidates['best'] < coef:
+                logger.info(f'Discarded generation. Iteration: {self.iteration}.')
+                continue
+
+            coef = candidates['best']    
+            self.current = candidates['mapping'][coef]
+            logger.info(f'Current: "{self.current}", iteration: {self.iteration}.')
             self.save_job()
 
             if self.current == self.target:
@@ -90,10 +95,10 @@ class Bioreactor:
         logger.info('Loaded current job ' + jobkey)
         key_value = self.cache.get(jobkey)
         job = json.loads(key_value)
-        self.job = job.id
-        self.iteration = job.iteration
-        self.target = job.target
-        self.current = job.current
+        self.job = job['id']
+        self.iteration = job['iteration']
+        self.target = job['target']
+        self.current = job['current']
 
     def initialize_job(self):
         """
@@ -104,7 +109,7 @@ class Bioreactor:
         self.target = self.fetch_target(MIN_LENGTH, MAX_LENGTH)
         self.current = 'a' * len(self.target)
         jobkey = self.host + '-job'
-        logger.info(f'Generated new job {jobkey}, ID: {self.id}, target: "{self.target}"')
+        logger.info(f'Generated new job {jobkey}, ID: {self.job}, target: "{self.target}"')
         self.save_job()
         self.ready = True
 
@@ -129,8 +134,8 @@ class Bioreactor:
         response = requests.get(url)
         if response.status_code == 200:
             data = json.loads(response.content)
-            logger.info(f'Acquired new target: "{data.sentence}" from host: {data.host}')
-            return data.sentence
+            logger.info("Acquired new target: \"" + data['sentence'] + "\" from host: " + data["host"])
+            return data['sentence'] 
         else:
             logger.error(f"Failed to fetch target from {url}. Status code: {response.status_code}")
             return None

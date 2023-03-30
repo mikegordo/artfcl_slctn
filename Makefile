@@ -25,13 +25,11 @@ deploy_redis:
 
 deploy_bioreactor:
 	kubectl create -f deploy/bioreactor-deployment.yaml
-	kubectl create -f deploy/bioreactor-service.yaml
 
 kill:
 	kubectl delete deployment generator-deployment
 	kubectl delete deployment redis-deployment
 	kubectl delete deployment bioreactor-deployment
-	kubectl delete service bioreactor
 	kubectl delete service generator
 	kubectl delete service redis
 	# kubectl delete service generator-service-exposed
