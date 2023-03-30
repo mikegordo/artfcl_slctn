@@ -65,7 +65,9 @@ class Bioreactor:
 
             if self.current == self.target:
                 logger.info(f'Completed in {self.iteration} iterations.')
-                exit(0)
+                
+        
+
             
     def register(self,) -> None:
         time.sleep(random.randint(1, 1000) / 1000)
