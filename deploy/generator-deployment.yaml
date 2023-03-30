@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: generator-deployment
   labels:
-    type: generator
+    type: generator-deployment
     app: as
 spec:
   replicas: 2

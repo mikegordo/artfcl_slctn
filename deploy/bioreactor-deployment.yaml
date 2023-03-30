@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bioreactor-deployment
+  labels:
+    type: bioreactor-deployment
+    app: as
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: bioreactor-pod
+      app: as
+  template:
+    metadata:
+      name: bioreactor-pod
+      labels:
+        type: bioreactor-pod
+        app: as
+    spec:
+      containers:
+        - name: bioreactor-app
+          image: himor/as-bioreactor

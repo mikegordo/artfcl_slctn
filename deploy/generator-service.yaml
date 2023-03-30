@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: generator-service
+  name: generator
   labels:
     name: generator-service
     app: as
